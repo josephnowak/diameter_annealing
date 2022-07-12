@@ -1,8 +1,9 @@
+#ifndef _ROUTING_H_
+#define _ROUTING_H_
+
+#include <bits/stdc++.h>
 #include <random>
-#include <math.h>
-#include <climits>
 #include <numeric>
-#include <set>
 #include <unordered_set>
 #include <unordered_map>
 #include <queue>
@@ -10,7 +11,7 @@
 #include <chrono> 
 #include <map>
 #include <iostream> 
-#include <assert.h>
+#include <diameter_annealing/utils.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -22,29 +23,6 @@ random_device rd;
 mt19937 generator(rd());
 uniform_real_distribution<double> uniform_real(0, 1);
 
-
-/*
-TODO:
-1. Document all the different attributes and the general logic of every method
-2. Add an option to select random paths instead of use the dijkstra
-*/
-
-
-
-template<class bidiiter>
-bidiiter random_choose(bidiiter begin, bidiiter end, size_t num_random) {
-    size_t left = std::distance(begin, end);
-    while (num_random--) {
-        bidiiter r = begin;
-		uniform_int_distribution<int> uniform_int_path(0, left - 1);
-		int mov = uniform_int_path(generator);
-        std::advance(r, mov);
-        std::swap(*begin, *r);
-        ++begin;
-        --left;
-    }
-    return begin;
-}
 
 
 class BaseRouting {
@@ -565,131 +543,6 @@ class SymmetricRouting: virtual public BaseRouting {
 		}
 };
 
-template<typename T>
-class SimulatedAnnealing
-{
 
-public:
-	/**
-	 * @brief Initial temperature of the system.
-	 */
-	double temperature;
-	/**
-	 * @brief Reduction factor explained on reduce_temperature method
-	 */
-	double beta; 
-	/**
-	 * @brief Minimum temperature of the system.
-	 */
-	double min_temperature;
-	/**
-	 * @brief Number of repetitions to find a neighborhood solution before reduce the temperature
-	 */
-	int n_iterations;
-	/**
-	 * @brief Routing
-	 */
-	T routing;
+#endif
 
-	/**
-	 * @brief Best routing found during the execution of the algorithm
-	 */
-	T best_routing;
-
-
-	SimulatedAnnealing(T &routing, double temperature, double min_temperature, double beta, int n_iterations = 100)
-	{
-		this->temperature = temperature;
-		this->routing = routing;
-		this->best_routing = routing;
-		this->min_temperature = min_temperature;
-		this->beta = beta;
-		this->n_iterations = n_iterations;
-	}
-
-	/**
-	 * 
-	 * @brief Simulated annealing algorithm to optimize routings based on any metric
-	 */
-	T optimize()
-	{
-		double temperature = this->temperature;
-		pair<int,int> act_cost = this->routing.evaluate();
-		pair<int,int> best_cost = act_cost;
-		while(temperature > this->min_temperature)
-		{
-			for(int i = 0; i < this->n_iterations; i++)
-			{
-				this->routing.neighborhood_solution();
-
-				pair<int, int> new_cost = this->routing.evaluate();
-
-				float dif_cost = ((act_cost.first - new_cost.first) / 2) / (float)this->routing.sample_size;
-				double x = uniform_real(generator);
-				if(dif_cost > 0)
-					act_cost = new_cost;
-				else if(dif_cost == 0 and (act_cost.second >= new_cost.second))
-					act_cost = new_cost;
-				else if(dif_cost < 0 and x < exp(dif_cost/temperature))
-					act_cost = new_cost;
-				else{
-					// cout << "act_sol: " << act_cost.first << " new_cost: " << new_cost.first << endl;
- 					this->routing.forget_neighborhood_solution();
-				}
-
-				if(best_cost.first > new_cost.first  or 
-					(new_cost.first == best_cost.first and (best_cost.second > new_cost.second))){
-					this->best_routing = this->routing;
-					best_cost = new_cost;
-				}
-			}
-			this->routing.update_routing();
-			cout << "function value: " << this->routing.evaluate().first << ", temperature: " << temperature << endl;
-			temperature = this->reduce_temperature(temperature);
-		}
-		return this->best_routing;
-	}
-	double reduce_temperature(double temperature)
-	{
-		return temperature - this->beta;
-	}
-};
-
-
-int main()
-{
-	
-	int n, m;
-	cin >> n >> m;
-	vector<vector<int>> g(n, vector<int>());
-	for(int i = 0; i < m; i++)
-	{
-		int x, y, w;
-		cin >> x >> y;
-		g[x].push_back(y);
-		g[y].push_back(x);
-	}
-
-	
-	SymmetricRouting routing(g, 5, 50, 0.5);
-
-	SimulatedAnnealing<SymmetricRouting> simulated_annealing(routing, 10, 1e-1, 1);
-
-	auto start = chrono::steady_clock::now();
-	SymmetricRouting sol = simulated_annealing.optimize();
-	auto end = chrono::steady_clock::now();
-	cout << "time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << endl;
-	
-	cout << "annealing: " << sol.evaluate().first << endl;
-	// int sum = 0;
-	// for(int i = 0; i < n; i++){
-	// 	sum += sol.charge_per_node[i];
-	// 	cout << sol.charge_per_node[i] << " ";
-	// }
-	// cout << endl;
-
-	vector<vector<vector<int>>> result_routing = sol.get_standard_format_routing();
-
-	cout << sol.validate_routing(result_routing, sol.evaluate().first) << endl;
-	return 0;
-}

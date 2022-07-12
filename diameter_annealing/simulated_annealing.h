@@ -1,3 +1,6 @@
+#ifndef _SIMULATED_ANNEALING_H_
+#define _SIMULATED_ANNEALING_H_
+
 #include <bits/stdc++.h>
 #include <random>
 #include <math.h>
@@ -20,43 +23,67 @@ mt19937 generator(rd());
 uniform_real_distribution<double> uniform_real(0, 1);
 
 
+
+template<typename T>
 class SimulatedAnnealing
 {
-	double temperature;
-	double beta; 
-	double min_temperature;
-	BaseRouting routing;
-	BaseRouting best_routing;
 
 public:
-	SimulatedAnnealing(Routing &routing, double temperature, double min_temperature, double beta)
+	/**
+	 * @brief Initial temperature of the system.
+	 */
+	double temperature;
+	/**
+	 * @brief Reduction factor explained on reduce_temperature method
+	 */
+	double beta; 
+	/**
+	 * @brief Minimum temperature of the system.
+	 */
+	double min_temperature;
+	/**
+	 * @brief Number of repetitions to find a neighborhood solution before reduce the temperature
+	 */
+	int n_iterations;
+	/**
+	 * @brief Routing
+	 */
+	T routing;
+
+	/**
+	 * @brief Best routing found during the execution of the algorithm
+	 */
+	T best_routing;
+
+
+	SimulatedAnnealing(T &routing, double temperature, double min_temperature, double beta, int n_iterations = 100)
 	{
 		this->temperature = temperature;
 		this->routing = routing;
 		this->best_routing = routing;
 		this->min_temperature = min_temperature;
 		this->beta = beta;
+		this->n_iterations = n_iterations;
 	}
-	Routing optimize()
+
+	/**
+	 * 
+	 * @brief Simulated annealing algorithm to optimize routings based on any metric
+	 */
+	T optimize()
 	{
 		double temperature = this->temperature;
 		pair<int,int> act_cost = this->routing.evaluate();
 		pair<int,int> best_cost = act_cost;
 		while(temperature > this->min_temperature)
 		{
-			cout << "temperature: " << temperature << endl;
-			auto start_total = chrono::steady_clock::now();
-			for(int i = 0; i < 100; i++)
+			for(int i = 0; i < this->n_iterations; i++)
 			{
-				auto start = chrono::steady_clock::now();
 				this->routing.neighborhood_solution();
-				auto end = chrono::steady_clock::now();
-				// cout << "time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << endl;
+
 				pair<int, int> new_cost = this->routing.evaluate();
 
-				// cout << new_cost.first << endl;
 				float dif_cost = ((act_cost.first - new_cost.first) / 2) / (float)this->routing.sample_size;
-				//  cout << dif_cost << endl;
 				double x = uniform_real(generator);
 				if(dif_cost > 0)
 					act_cost = new_cost;
@@ -65,7 +92,7 @@ public:
 				else if(dif_cost < 0 and x < exp(dif_cost/temperature))
 					act_cost = new_cost;
 				else{
-					cout << "act_sol: " << act_cost.first << " new_cost: " << new_cost.first << endl;
+					// cout << "act_sol: " << act_cost.first << " new_cost: " << new_cost.first << endl;
  					this->routing.forget_neighborhood_solution();
 				}
 
@@ -74,19 +101,11 @@ public:
 					this->best_routing = this->routing;
 					best_cost = new_cost;
 				}
-				// cout << new_cost.first << endl;
 			}
 			this->routing.update_routing();
-			auto end = chrono::steady_clock::now();
-			cout << "total time: " << chrono::duration_cast<chrono::microseconds>(end - start_total).count() << endl;
-			cout << this->routing.evaluate().first << endl;
+			cout << "function value: " << this->routing.evaluate().first << ", temperature: " << temperature << endl;
 			temperature = this->reduce_temperature(temperature);
 		}
-		/*for(int i = 0; i < this->best_routing.num_nodes; i++)
-			for(int j = i + 1; j < this->best_routing.num_nodes; j++){
-				this->best_routing.R[j][i] = this->best_routing.R[i][j];
-				reverse(this->best_routing.R[j][i].begin(), this->best_routing.R[j][i].end());
-			}*/
 		return this->best_routing;
 	}
 	double reduce_temperature(double temperature)
@@ -95,3 +114,5 @@ public:
 	}
 };
 
+
+#endif
