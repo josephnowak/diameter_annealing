@@ -1,8 +1,8 @@
 #include <random>
 #include <math.h>
 #include <climits>
-#include <numeric>
 #include <set>
+#include <numeric>
 #include <unordered_set>
 #include <unordered_map>
 #include <queue>
@@ -21,14 +21,6 @@ using namespace std::chrono;
 random_device rd;
 mt19937 generator(rd());
 uniform_real_distribution<double> uniform_real(0, 1);
-
-
-/*
-TODO:
-1. Document all the different attributes and the general logic of every method
-2. Add an option to select random paths instead of use the dijkstra
-*/
-
 
 
 template<class bidiiter>
