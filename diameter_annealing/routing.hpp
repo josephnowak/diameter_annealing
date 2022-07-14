@@ -1,21 +1,20 @@
 #ifndef _ROUTING_H_
 #define _ROUTING_H_
 
+
+#include <math.h>
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
 #include <map>
 #include <vector>
-#include "utils.hpp"
+#include <iostream> 
+#include <random>
 
 using namespace std;
 
 #define um unordered_map
 #define us unordered_set
-//default_random_engine generator;
-// random_device rd;
-// mt19937 generator(rd());
-
 
 
 class BaseRouting {
@@ -24,6 +23,14 @@ class BaseRouting {
 	 * @brief Abstract class used on the simulated annealing class/algorithm to control how to find neighborhood_solution
 	 */
 	public:
+		
+		random_device rd;
+		mt19937 generator = mt19937(rd());
+
+
+		/**
+		 * @brief Number of change done to the routing in the neighborhood_solution method.
+		 */
 		int sample_size;
 		/**
 		 * This is equivalent to calculate the R[node].size() * charge, is only useful to simplify the use of symmetric paths
@@ -71,19 +78,42 @@ class BaseRouting {
 		 */
 		virtual vector<vector<vector<int>>> get_standard_format_routing() = 0;
 
-
 		/**
 		 *
 		 * @brief Return a pair with the forwarding diameter (1) and any other value that is going to break a tie (2)
 		 */
 		virtual pair<int, int> evaluate() = 0;
 
+		/**
+		 * This method is called every time the algorithm find this routing is better than all the previous,
+		 * just try to store the necessary information 
+		 * @brief Save the actual routing
+		 */
+		virtual void store_routing() = 0;
+
+		/**
+		 *  This method is only called at the end of the algorithm
+		 * @brief Set the stored routing as the actual
+		 */
+		virtual void set_stored_routing() = 0;
+
+		/**
+		 * @brief Select N elements from a set of elements randomly 
+		 */
+		template <class bidiiter>
+		bidiiter random_choose(bidiiter begin, bidiiter end, size_t num_random);
+
+		/**
+		 * @brief Get a number between 0 and 1, used in the simulated annealing algorithm
+		 */
+		virtual double get_random_probability() = 0;
+
 };
 
 
 class SymmetricRouting: virtual public BaseRouting {
 	/**
-	 * Implementation of the BaseRounting using symmetric, simple paths and dijkstra to find neighborhood solutions.
+	 * Implementation of the BaseRounting using symmetric paths and dijkstra to find neighborhood solutions.
 	 *
 	 * @brief Routing of the graph
 	 */
@@ -132,6 +162,8 @@ class SymmetricRouting: virtual public BaseRouting {
 		 */
 		float regular_path_probability;
 
+		void update_internal_routing_data();
+
 		void generate_initial_routing();
 
 		vector<int> build_path(vector<int> &prev, int x, int y);
@@ -141,13 +173,14 @@ class SymmetricRouting: virtual public BaseRouting {
 		void modify_routing(vector<unordered_map<int, int>> &new_paths, vector<unordered_map<int, int>> &old_paths);
 
 		void get_bfs_random_paths(int source);
+		
 
 	public:
 		/**
 		 * Every cell/node of the vector is a set with all the paths (IDs) that use that node as an internal one.
 		 * @brief SymmetricRouting of the network
 		 */
-		vector<unordered_map<int, int>> R;
+		vector<unordered_map<int, int>> R, best_R;
 
 		
 		/**
@@ -158,17 +191,8 @@ class SymmetricRouting: virtual public BaseRouting {
 		 * @brief Determine the number of best possible paths to select randonmly
 		 */
 		int universe_size;
-
-		/**
-		 * Once the numbre of paths is restricted based on the universe_size, they are sorted randomly and then M of them
-		 * are selected (this m is the sample_size)
-		 * @brief Number of paths that are going to be modified every time the neighborhood_solution method is called
-		 */
-		int sample_size;
-
-		// uniform_real_distribution<double> uniform_real
 	
-		SymmetricRouting(){}
+		SymmetricRouting();
 
 		SymmetricRouting(
 			vector<vector<int>> &g, 
@@ -179,6 +203,10 @@ class SymmetricRouting: virtual public BaseRouting {
 
 		SymmetricRouting(const SymmetricRouting &a);
 
+		void store_routing();
+
+		void set_stored_routing();
+
 		void neighborhood_solution();
 
 		void update_routing();
@@ -187,13 +215,15 @@ class SymmetricRouting: virtual public BaseRouting {
 
 		pair<int, int> evaluate();
 
-		vector<vector<vector<int>>> get_standard_format_routing();
+		double get_random_probability();
 
 		/**
-		 * The validation is simple, it takes every pair of nodes call them X and Y and then it takes the path from X to Y
-		 * and verify if it possible to reach Y from X using that path, then it verify if the forwarding diameter is the same.
-		 * @brief Validate if the routing is valid and has the expected forwarding diameter, useful for debug
+		 * @brief Get a random integer number on a interval, useful for randomize the graph algorithms
 		 */
+		int get_random_int_number(int l, int r);
+
+		vector<vector<vector<int>>> get_standard_format_routing();
+
 		bool validate_routing(vector<vector<vector<int>>> &routing, int expected_forwarding_diameter);
 };
 

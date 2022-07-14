@@ -45,6 +45,7 @@ class BaseRouting {
 	 * @brief Abstract class used on the simulated annealing class/algorithm to control how to find neighborhood_solution
 	 */
 	public:
+
 		int sample_size;
 		/**
 		 * This is equivalent to calculate the R[node].size() * charge, is only useful to simplify the use of symmetric paths
@@ -99,52 +100,18 @@ class BaseRouting {
 		 */
 		virtual pair<int, int> evaluate() = 0;
 
-		bool validate_routing(vector<vector<vector<int>>> &routing, int expected_forwarding_diameter){
-			
-			int n = this->g.size();
-			vector<int> charge_per_node = vector<int>(n, 0);
-			vector<vector<int>> charge_per_path = vector<vector<int>>(n, vector<int>(n, 0));
-			for(int i = 0; i < n; i++){
-				for(int j = 0; j < n; j++){
-					if(i == j) continue;
-					int prev_node = i;
-					bool incorrect = false;
-					for(int node: routing[i][j]){
-						if(std::find(this->g[prev_node].begin(), this->g[prev_node].end(), node) == this->g[prev_node].end()) {
-							incorrect = true;
-						}
-						charge_per_node[node] += 1;
-						prev_node = node;
-					}
-					if(std::find(this->g[prev_node].begin(), this->g[prev_node].end(), j) == this->g[prev_node].end()) {
-						incorrect = true;
-					}
-					if(incorrect){
-						cout << "The path between the nodes: " << i << " and " << j << " is incorrect" << endl;
-						for(int node: routing[i][j])
-							cout << node << " ";
-						cout << endl;
-						return false;
-					}
-				}
-			}
-			int forwarding_diameter = 0;
-			for(int i = 0; i < n; i++){
-				for(int j = 0; j < n; j++){
-					for(int node: routing[i][j]){
-						charge_per_path[i][j] += charge_per_node[node];
-					}
-					forwarding_diameter = max(forwarding_diameter, charge_per_path[i][j]);
-				}
-				
-			}
+		/**
+		 * This method is called every time the algorithm find this routing is better than all the previous,
+		 * just try to store the necessary information 
+		 * @brief Save the actual routing
+		 */
+		virtual void store_routing() = 0;
 
-			if(forwarding_diameter != expected_forwarding_diameter){
-				cout << "SymmetricRouting forwarding diameter " << forwarding_diameter << ", expected: " << expected_forwarding_diameter << endl;
-				return false;
-			}
-			return true;
-		}
+		/**
+		 *  This method is only called at the end of the algorithm
+		 * @brief Set the stored routing as the actual
+		 */
+		virtual void set_stored_routing() = 0;
 
 };
 
@@ -200,11 +167,7 @@ class SymmetricRouting: virtual public BaseRouting {
 		 */
 		float regular_path_probability;
 
-		void generate_initial_routing()
-		{
-			for(int i = 0; i < this->num_nodes; i++)
-				get_bfs_random_paths(i);
-			
+		void update_internal_routing_data(){
 			for(int i = 0; i < this->num_nodes; i++){
 				this->charge_per_node[i] = this->R[i].size() * this->charge;
 				for(const pair<int, int> path_map: this->R[i]){
@@ -212,12 +175,18 @@ class SymmetricRouting: virtual public BaseRouting {
 					this->paths_ids.insert(path_map.first);
 				}
 			}
-			this->update_routing();
+		}
+
+		void generate_initial_routing()
+		{
+			for(int i = 0; i < this->num_nodes; i++)
+				get_bfs_random_paths(i);
 			
+			this->update_internal_routing_data();
+			this->update_routing();
 		}
 		vector<int> build_path(vector<int> &prev, int x, int y)
 		{
-
 			vector<int> path;
 			int act = y;
 			while(prev[act] != act)
@@ -335,7 +304,7 @@ class SymmetricRouting: virtual public BaseRouting {
 		 * Every cell/node of the vector is a set with all the paths (IDs) that use that node as an internal one.
 		 * @brief SymmetricRouting of the network
 		 */
-		vector<unordered_map<int, int>> R;
+		vector<unordered_map<int, int>> R, best_R;
 
 		
 		/**
@@ -371,6 +340,7 @@ class SymmetricRouting: virtual public BaseRouting {
 			this->erased_paths = vector<unordered_map<int, int>>(this->num_nodes, unordered_map<int, int>());
 			this->total_charge_per_path = vector<int>(this->num_nodes * this->num_nodes, 0);
 			this->dijkstra_path_distances = vector<int>(this->num_nodes * this->num_nodes, 0);
+			this->paths_ids = unordered_set<int>();
 			this->charge = 2;
 			this->regular_path_probability = regular_path_probability;
 
@@ -389,6 +359,23 @@ class SymmetricRouting: virtual public BaseRouting {
 			this->total_charge_per_path = a.total_charge_per_path;
 			this->paths_ids = a.paths_ids;
 		}
+		void store_routing(){
+			// Store this information on memory to reduce the amount of memory consumption.
+			this->best_R = this->R;
+		}
+
+		void set_stored_routing(){
+			this->R = this->best_R;
+			this->total_charge_per_path = vector<int>(this->num_nodes * this->num_nodes, 0);
+			this->charge_per_node = vector<int>(this->num_nodes);
+			this->added_paths = vector<unordered_map<int, int>>(this->num_nodes, unordered_map<int, int>());
+			this->erased_paths = vector<unordered_map<int, int>>(this->num_nodes, unordered_map<int, int>());
+			this->total_charge_per_path = vector<int>(this->num_nodes * this->num_nodes, 0);
+			this->paths_ids = unordered_set<int>();
+			this->update_internal_routing_data();
+			this->update_routing();
+		}
+
 		void neighborhood_solution()
 		{
 			for(int i = 0; i < this->num_nodes; i++)
@@ -424,7 +411,6 @@ class SymmetricRouting: virtual public BaseRouting {
 					1. The path charge, which is the sum of the charge of the nodes used as internal nodes on the path
 					2. The dijkstra distance, explained in the update_routing method
 					3. The id of the path, used to break ties
-
 				*/
 				ordered_charge_per_path.insert(make_tuple(
 					this->total_charge_per_path[id_path], 
@@ -555,9 +541,54 @@ class SymmetricRouting: virtual public BaseRouting {
 			return routing;
 
 		}
+		bool validate_routing(vector<vector<vector<int>>> &routing, int expected_forwarding_diameter){
+			
+			int n = this->g.size();
+			vector<int> charge_per_node = vector<int>(n, 0);
+			vector<vector<int>> charge_per_path = vector<vector<int>>(n, vector<int>(n, 0));
+			for(int i = 0; i < n; i++){
+				for(int j = 0; j < n; j++){
+					if(i == j) continue;
+					int prev_node = i;
+					bool incorrect = false;
+					for(int node: routing[i][j]){
+						if(std::find(this->g[prev_node].begin(), this->g[prev_node].end(), node) == this->g[prev_node].end()) {
+							incorrect = true;
+						}
+						charge_per_node[node] += 1;
+						prev_node = node;
+					}
+					if(std::find(this->g[prev_node].begin(), this->g[prev_node].end(), j) == this->g[prev_node].end()) {
+						incorrect = true;
+					}
+					if(incorrect){
+						cout << "The path between the nodes: " << i << " and " << j << " is incorrect" << endl;
+						for(int node: routing[i][j])
+							cout << node << " ";
+						cout << endl;
+						return false;
+					}
+				}
+			}
+			int forwarding_diameter = 0;
+			for(int i = 0; i < n; i++){
+				for(int j = 0; j < n; j++){
+					for(int node: routing[i][j]){
+						charge_per_path[i][j] += charge_per_node[node];
+					}
+					forwarding_diameter = max(forwarding_diameter, charge_per_path[i][j]);
+				}
+				
+			}
+
+			if(forwarding_diameter != expected_forwarding_diameter){
+				cout << "SymmetricRouting forwarding diameter " << forwarding_diameter << ", expected: " << expected_forwarding_diameter << endl;
+				return false;
+			}
+			return true;
+		}
 };
 
-template<typename T>
 class SimulatedAnnealing
 {
 
@@ -581,19 +612,13 @@ public:
 	/**
 	 * @brief Routing
 	 */
-	T routing;
-
-	/**
-	 * @brief Best routing found during the execution of the algorithm
-	 */
-	T best_routing;
+	BaseRouting * routing;
 
 
-	SimulatedAnnealing(T &routing, double temperature, double min_temperature, double beta, int n_iterations = 100)
+	SimulatedAnnealing(BaseRouting &routing, double temperature, double min_temperature, double beta, int n_iterations = 100)
 	{
 		this->temperature = temperature;
-		this->routing = routing;
-		this->best_routing = routing;
+		this->routing = &routing;
 		this->min_temperature = min_temperature;
 		this->beta = beta;
 		this->n_iterations = n_iterations;
@@ -603,21 +628,22 @@ public:
 	 * 
 	 * @brief Simulated annealing algorithm to optimize routings based on any metric
 	 */
-	T optimize()
+	void optimize()
 	{
 		double temperature = this->temperature;
-		pair<int,int> act_cost = this->routing.evaluate();
+		pair<int,int> act_cost = this->routing->evaluate();
 		pair<int,int> best_cost = act_cost;
 		while(temperature > this->min_temperature)
 		{
 			for(int i = 0; i < this->n_iterations; i++)
 			{
-				this->routing.neighborhood_solution();
+				this->routing->neighborhood_solution();
 
-				pair<int, int> new_cost = this->routing.evaluate();
+				pair<int, int> new_cost = this->routing->evaluate();
 
-				float dif_cost = ((act_cost.first - new_cost.first) / 2) / (float)this->routing.sample_size;
+				float dif_cost = ((act_cost.first - new_cost.first) / 2) / (float)this->routing->sample_size;
 				double x = uniform_real(generator);
+
 				if(dif_cost > 0)
 					act_cost = new_cost;
 				else if(dif_cost == 0 and (act_cost.second >= new_cost.second))
@@ -626,20 +652,20 @@ public:
 					act_cost = new_cost;
 				else{
 					// cout << "act_sol: " << act_cost.first << " new_cost: " << new_cost.first << endl;
- 					this->routing.forget_neighborhood_solution();
+ 					this->routing->forget_neighborhood_solution();
 				}
 
 				if(best_cost.first > new_cost.first  or 
 					(new_cost.first == best_cost.first and (best_cost.second > new_cost.second))){
-					this->best_routing = this->routing;
+					this->routing->store_routing();
 					best_cost = new_cost;
 				}
 			}
-			this->routing.update_routing();
-			cout << "function value: " << this->routing.evaluate().first << ", temperature: " << temperature << endl;
+			this->routing->update_routing();
+			cout << "function value: " << this->routing->evaluate().first << ", temperature: " << temperature << endl;
 			temperature = this->reduce_temperature(temperature);
 		}
-		return this->best_routing;
+		this->routing->set_stored_routing();
 	}
 	double reduce_temperature(double temperature)
 	{
@@ -665,14 +691,14 @@ int main()
 	
 	SymmetricRouting routing(g, 5, 50, 0.5);
 
-	SimulatedAnnealing<SymmetricRouting> simulated_annealing(routing, 10, 1e-1, 1);
+	SimulatedAnnealing simulated_annealing(routing, 10, 1e-1, 1);
 
 	auto start = chrono::steady_clock::now();
-	SymmetricRouting sol = simulated_annealing.optimize();
+	simulated_annealing.optimize();
 	auto end = chrono::steady_clock::now();
 	cout << "time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << endl;
 	
-	cout << "annealing: " << sol.evaluate().first << endl;
+	cout << "annealing: " << routing.evaluate().first << endl;
 	// int sum = 0;
 	// for(int i = 0; i < n; i++){
 	// 	sum += sol.charge_per_node[i];
@@ -680,8 +706,8 @@ int main()
 	// }
 	// cout << endl;
 
-	vector<vector<vector<int>>> result_routing = sol.get_standard_format_routing();
+	vector<vector<vector<int>>> result_routing = routing.get_standard_format_routing();
 
-	cout << sol.validate_routing(result_routing, sol.evaluate().first) << endl;
+	cout << routing.validate_routing(result_routing, routing.evaluate().first) << endl;
 	return 0;
 }

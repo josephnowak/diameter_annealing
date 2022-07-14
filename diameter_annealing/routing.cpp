@@ -1,7 +1,7 @@
+#include <random>
+#include <math.h>
 #include <climits>
 #include <set>
-#include <random>
-#include <assert.h>
 #include <numeric>
 #include <unordered_set>
 #include <unordered_map>
@@ -10,7 +10,8 @@
 #include <chrono>
 #include <map>
 #include <iostream>
-#include "utils.hpp"
+#include <assert.h>
+
 #include "routing.hpp"
 
 using namespace std;
@@ -18,70 +19,40 @@ using namespace std::chrono;
 
 #define um unordered_map
 #define us unordered_set
+// default_random_engine generator;
 
-bool SymmetricRouting::validate_routing(vector<vector<vector<int>>> &routing, int expected_forwarding_diameter)
+
+
+template <class bidiiter>
+bidiiter BaseRouting::random_choose(bidiiter begin, bidiiter end, size_t num_random)
 {
-
-    int n = this->g.size();
-    vector<int> charge_per_node = vector<int>(n, 0);
-    vector<vector<int>> charge_per_path = vector<vector<int>>(n, vector<int>(n, 0));
-    for (int i = 0; i < n; i++)
+    size_t left = std::distance(begin, end);
+    while (num_random--)
     {
-        for (int j = 0; j < n; j++)
-        {
-            if (i == j)
-                continue;
-            int prev_node = i;
-            bool incorrect = false;
-            for (int node : routing[i][j])
-            {
-                if (std::find(this->g[prev_node].begin(), this->g[prev_node].end(), node) == this->g[prev_node].end())
-                {
-                    incorrect = true;
-                }
-                charge_per_node[node] += 1;
-                prev_node = node;
-            }
-            if (std::find(this->g[prev_node].begin(), this->g[prev_node].end(), j) == this->g[prev_node].end())
-            {
-                incorrect = true;
-            }
-            if (incorrect)
-            {
-                cout << "The path between the nodes: " << i << " and " << j << " is incorrect" << endl;
-                for (int node : routing[i][j])
-                    cout << node << " ";
-                cout << endl;
-                return false;
-            }
-        }
+        bidiiter r = begin;
+        uniform_int_distribution<int> uniform_int_path(0, left - 1);
+        int mov = uniform_int_path(this->generator);
+        std::advance(r, mov);
+        std::swap(*begin, *r);
+        ++begin;
+        --left;
     }
-    int forwarding_diameter = 0;
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            for (int node : routing[i][j])
-            {
-                charge_per_path[i][j] += charge_per_node[node];
-            }
-            forwarding_diameter = max(forwarding_diameter, charge_per_path[i][j]);
-        }
-    }
-
-    if (forwarding_diameter != expected_forwarding_diameter)
-    {
-        cout << "SymmetricRouting forwarding diameter " << forwarding_diameter << ", expected: " << expected_forwarding_diameter << endl;
-        return false;
-    }
-    return true;
+    return begin;
 }
 
-void SymmetricRouting::generate_initial_routing()
-{
-    for (int i = 0; i < this->num_nodes; i++)
-        this->get_bfs_random_paths(i);
+double SymmetricRouting::get_random_probability(){
+    uniform_real_distribution<double> uniform_real(0, 1);
+    return uniform_real(this->generator);
+}
 
+int SymmetricRouting::get_random_int_number(int l, int r){;
+    uniform_int_distribution<int> uniform_int_n(l, r);
+    return uniform_int_n(this->generator);
+}
+
+
+void SymmetricRouting::update_internal_routing_data()
+{
     for (int i = 0; i < this->num_nodes; i++)
     {
         this->charge_per_node[i] = this->R[i].size() * this->charge;
@@ -91,12 +62,18 @@ void SymmetricRouting::generate_initial_routing()
             this->paths_ids.insert(path_map.first);
         }
     }
-    this->update_routing();
 }
 
+void SymmetricRouting::generate_initial_routing()
+{
+    for (int i = 0; i < this->num_nodes; i++)
+        get_bfs_random_paths(i);
+
+    this->update_internal_routing_data();
+    this->update_routing();
+}
 vector<int> SymmetricRouting::build_path(vector<int> &prev, int x, int y)
 {
-
     vector<int> path;
     int act = y;
     while (prev[act] != act)
@@ -112,7 +89,7 @@ vector<int> SymmetricRouting::build_path(vector<int> &prev, int x, int y)
 pair<vector<int>, vector<int>> SymmetricRouting::dijkstra(int x, int y)
 {
     set<tuple<int, float, int>> q;
-    q.insert(make_tuple(0, uniform_real(generator), x));
+    q.insert(make_tuple(0, this->get_random_probability(), x));
     vector<int> dist_per_node(this->num_nodes, INT_MAX);
     vector<int> prev(this->num_nodes);
     prev[x] = x;
@@ -135,7 +112,7 @@ pair<vector<int>, vector<int>> SymmetricRouting::dijkstra(int x, int y)
                 prev[adj] = node;
                 q.erase(make_tuple(dist_per_node[adj], random_value, adj));
                 dist_per_node[adj] = dist + this->charge_per_node[adj] + 2;
-                q.insert(make_tuple(dist_per_node[adj], uniform_real(generator), adj));
+                q.insert(make_tuple(dist_per_node[adj], this->get_random_probability(), adj));
             }
         }
     }
@@ -203,24 +180,23 @@ void SymmetricRouting::get_bfs_random_paths(int source)
             for (int &node : this->g[act_node])
                 if (distances[node] == dist - 1)
                     valid.push_back(node);
-            uniform_int_distribution<int> uniform_int_path(0, valid.size() - 1);
-            int pos = uniform_int_path(generator);
+
+            // modify this
+            int pos = this->get_random_int_number(0, valid.size() - 1);
             act_node = valid[pos];
             this->R[act_node].insert({path_id, dist - 2});
         }
     }
 }
 
-SymmetricRouting::SymmetricRouting()
-{
-}
+
+SymmetricRouting::SymmetricRouting() {}
 
 SymmetricRouting::SymmetricRouting(
     vector<vector<int>> &g,
     int sample_size,
     int universe_size,
-    float regular_path_probability
-)
+    float regular_path_probability)
 {
     this->g = g;
     this->num_nodes = g.size();
@@ -230,6 +206,7 @@ SymmetricRouting::SymmetricRouting(
     this->erased_paths = vector<unordered_map<int, int>>(this->num_nodes, unordered_map<int, int>());
     this->total_charge_per_path = vector<int>(this->num_nodes * this->num_nodes, 0);
     this->dijkstra_path_distances = vector<int>(this->num_nodes * this->num_nodes, 0);
+    this->paths_ids = unordered_set<int>();
     this->charge = 2;
     this->regular_path_probability = regular_path_probability;
 
@@ -239,7 +216,6 @@ SymmetricRouting::SymmetricRouting(
     this->sample_size = min(sample_size, this->universe_size);
     this->selected_paths = vector<int>(this->universe_size, -1);
 }
-
 SymmetricRouting::SymmetricRouting(const SymmetricRouting &a)
 {
     this->num_nodes = a.num_nodes;
@@ -248,6 +224,25 @@ SymmetricRouting::SymmetricRouting(const SymmetricRouting &a)
     this->g = a.g;
     this->total_charge_per_path = a.total_charge_per_path;
     this->paths_ids = a.paths_ids;
+}
+void SymmetricRouting::store_routing()
+{
+    // Store this information on memory to reduce the amount of memory consumption.
+    this->best_R = this->R;
+}
+
+void SymmetricRouting::set_stored_routing()
+{
+    this->R = this->best_R;
+    this->best_R.clear();
+    this->total_charge_per_path = vector<int>(this->num_nodes * this->num_nodes, 0);
+    this->charge_per_node = vector<int>(this->num_nodes);
+    this->added_paths = vector<unordered_map<int, int>>(this->num_nodes, unordered_map<int, int>());
+    this->erased_paths = vector<unordered_map<int, int>>(this->num_nodes, unordered_map<int, int>());
+    this->total_charge_per_path = vector<int>(this->num_nodes * this->num_nodes, 0);
+    this->paths_ids = unordered_set<int>();
+    this->update_internal_routing_data();
+    this->update_routing();
 }
 
 void SymmetricRouting::neighborhood_solution()
@@ -281,21 +276,20 @@ void SymmetricRouting::neighborhood_solution()
 
     for (int id_path : this->paths_ids)
     {
-        int x = id_path / this->num_nodes, y = id_path % this->num_nodes;
         /*
             Every path is sorted based on three elements:
             1. The path charge, which is the sum of the charge of the nodes used as internal nodes on the path
             2. The dijkstra distance, explained in the update_routing method
             3. The id of the path, used to break ties
-
         */
         ordered_charge_per_path.insert(make_tuple(
             this->total_charge_per_path[id_path],
             this->dijkstra_path_distances[id_path],
-            id_path));
+            id_path
+        ));
 
         // preserve only universe_size elements
-        if (ordered_charge_per_path.size() > this->universe_size)
+        if ((int)ordered_charge_per_path.size() > this->universe_size)
         {
             ordered_charge_per_path.erase(prev(ordered_charge_per_path.end()));
         }
@@ -306,7 +300,7 @@ void SymmetricRouting::neighborhood_solution()
     {
         this->selected_paths[i++] = get<2>(element);
     }
-    random_choose(this->selected_paths.begin(), this->selected_paths.end(), this->sample_size);
+    this->random_choose(this->selected_paths.begin(), this->selected_paths.end(), this->sample_size);
 
     for (int i = 0; i < this->sample_size; i++)
     {
@@ -329,12 +323,12 @@ void SymmetricRouting::neighborhood_solution()
             this->erased_paths[j].insert(*r_element);
         }
 
-        double random_number = uniform_real(generator);
+        double random_number = this->get_random_probability();
         vector<int> path;
 
         if (random_number <= this->regular_path_probability)
         {
-            // get the dijkstra path from the node X to Y
+            // get the dijkstra path from the node X to Ys
             vector<int> prev_path_node = this->dijkstra(x, y).second;
             path = this->build_path(prev_path_node, x, y);
         }
@@ -349,7 +343,7 @@ void SymmetricRouting::neighborhood_solution()
             this->charge_per_node = copy_charge_per_node;
         }
 
-        for (int i = 0; i < path.size(); i++)
+        for (int i = 0; i < (int)path.size(); i++)
         {
             // for every node on the path increment the charge (only useful for the dijkstra)
             // and add it to the added_paths set
@@ -372,21 +366,21 @@ void SymmetricRouting::update_routing()
             this->dijkstra_path_distances[i * this->num_nodes + j] = distances_dijkstra[j];
     }
 }
-
 void SymmetricRouting::forget_neighborhood_solution()
 {
     this->modify_routing(this->erased_paths, this->added_paths);
 }
-
 pair<int, int> SymmetricRouting::evaluate()
 {
     return {
         *max_element(this->total_charge_per_path.begin(), this->total_charge_per_path.end()),
-        *max_element(this->charge_per_node.begin(), this->charge_per_node.end())};
+        *max_element(this->charge_per_node.begin(), this->charge_per_node.end())
+    };
 }
 
 vector<vector<vector<int>>> SymmetricRouting::get_standard_format_routing()
 {
+
     vector<vector<vector<int>>> routing = vector<vector<vector<int>>>(
         this->num_nodes,
         vector<vector<int>>(
@@ -408,7 +402,7 @@ vector<vector<vector<int>>> SymmetricRouting::get_standard_format_routing()
         sort(elements.begin(), elements.end());
 
         vector<int> path = vector<int>(elements.size());
-        for (int i = 0; i < path.size(); i++)
+        for (int i = 0; i < (int)path.size(); i++)
             path[i] = elements[i].second;
 
         routing[x][y] = path;
@@ -416,4 +410,63 @@ vector<vector<vector<int>>> SymmetricRouting::get_standard_format_routing()
         routing[y][x] = inverse_path;
     }
     return routing;
+}
+bool SymmetricRouting::validate_routing(vector<vector<vector<int>>> &routing, int expected_forwarding_diameter)
+{
+
+    int n = this->g.size();
+    vector<int> charge_per_node = vector<int>(n, 0);
+    vector<vector<int>> charge_per_path = vector<vector<int>>(n, vector<int>(n, 0));
+    bool incorrect = false;
+    vector<unordered_set<int>> graph_find = vector<unordered_set<int>>(this->num_nodes, unordered_set<int>());
+    for(int i = 0; i < this->num_nodes; i++)
+        for(int &node: this->g[i])
+            graph_find[i].insert(node);
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            if (i == j)
+                continue;
+            int prev_node = i;
+            for (int node : routing[i][j])
+            {
+                if (graph_find[prev_node].find(node) == graph_find[prev_node].end())
+                    incorrect = true;
+                
+                charge_per_node[node] += 1;
+                prev_node = node;
+            }
+            if (graph_find[prev_node].find(j) == graph_find[prev_node].end())
+                incorrect = true;
+            
+            if (incorrect)
+            {
+                cout << "The path between the nodes: " << i << " and " << j << " is incorrect" << endl;
+                for (int node : routing[i][j])
+                    cout << node << " ";
+                cout << endl;
+                return false;
+            }
+        }
+    }
+    int forwarding_diameter = 0;
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            for (int node : routing[i][j])
+            {
+                charge_per_path[i][j] += charge_per_node[node];
+            }
+            forwarding_diameter = max(forwarding_diameter, charge_per_path[i][j]);
+        }
+    }
+
+    if (forwarding_diameter != expected_forwarding_diameter)
+    {
+        cout << "SymmetricRouting forwarding diameter " << forwarding_diameter << ", expected: " << expected_forwarding_diameter << endl;
+        return false;
+    }
+    return true;
 }

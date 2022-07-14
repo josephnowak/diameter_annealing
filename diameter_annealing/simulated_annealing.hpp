@@ -2,10 +2,9 @@
 #define _SIMULATED_ANNEALING_H_
 
 
-using namespace std;
+#include "routing.hpp"
 
 
-template<typename T>
 class SimulatedAnnealing
 {
 
@@ -29,24 +28,24 @@ public:
 	/**
 	 * @brief Routing
 	 */
-	T routing;
-
-	/**
-	 * @brief Best routing found during the execution of the algorithm
-	 */
-	T best_routing;
+	BaseRouting * routing;
 
 
-	SimulatedAnnealing(T &routing, double temperature, double min_temperature, double beta, int n_iterations = 100);
+	SimulatedAnnealing(
+        BaseRouting &routing, 
+        double temperature, 
+        double min_temperature, 
+        double beta, 
+        int n_iterations = 100
+    );
 
 	/**
 	 * 
 	 * @brief Simulated annealing algorithm to optimize routings based on any metric
 	 */
-	T optimize();
-
-
-	double reduce_temperature(double temperature);
+	void optimize();
+    
+    double reduce_temperature(double temperature);
 };
 
 
