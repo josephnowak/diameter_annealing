@@ -4,5 +4,5 @@ CFLAGS= -Wall
 all: main
 
 main:
-	$(CCX) -o RUN test_imports.cpp diameter_annealing/*.cpp $(CFLAGS)
+	$(CCX) -O3 -std=c++17 -o RUN benchmarking.cpp diameter_annealing/*.cpp graph_generators/*.cpp $(CFLAGS)
 

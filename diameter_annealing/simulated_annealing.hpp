@@ -30,13 +30,24 @@ public:
 	 */
 	BaseRouting * routing;
 
+	/**
+	 * @brief Only useful for benchmarking
+	 */
+	double initial_routing_diameter;
+
+	/**
+	 * @brief Indicate if the algorithm should print the progress
+	 */
+	bool verbose = true;
+
 
 	SimulatedAnnealing(
         BaseRouting &routing, 
         double temperature, 
         double min_temperature, 
         double beta, 
-        int n_iterations = 100
+        int n_iterations = 100,
+		bool verbose=true
     );
 
 	/**

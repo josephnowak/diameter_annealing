@@ -1,50 +1,47 @@
-#include <bits/stdc++.h>
+#include <fstream>
 #include <set>
+#include <vector>
+
 using namespace std;
 #define ll long long int
 
 
-int main()
-{
-	int n;
-	cin >> n;
-	vector<vector<vector<int>>> graphs = vector<vector<vector<int>>>(n + 1);
-	graphs[2] = {{2, 4}, {1, 3}, {2, 4}, {1, 3}};
+void write_hypercube_graph(int n, string file_path){
 	
-	for(int i = 3; i <= n; i++)
-	{
-		graphs[i] = graphs[i - 1];
-		int m = graphs[i].size();
-		int size_g = (1 << i);
-		for(int j = m; j < size_g; j++)
-		{
-			graphs[i].push_back(graphs[i - 1][j - m]);
-			
-			for(int p = 0; p < graphs[i - 1][j - m].size(); p++)
-				graphs[i][graphs[i].size() - 1][p] += m;
-				graphs[i][graphs[i].size() - 1].push_back(j - m + 1);
-				
-		}
-		
-		for(int j = 0; j < m; j++)
-			graphs[i][j].push_back(j + m + 1);
-			
-	}
+	ofstream myfile;
+  	myfile.open(file_path);
 
-	set<pair<int,int>> set_pairs;
-	for(int i = 1; i <= graphs[n].size(); i++)
-	{
-		for(int node: graphs[n][i - 1])
-		{
-			if((set_pairs.find({i, node}) == set_pairs.end()) and 
-				(set_pairs.find({node, i}) == set_pairs.end()))
-			{
-				set_pairs.insert({i, node});
-				cout << i - 1 << " " << node - 1 << endl;
+	myfile << (1 << n) << " " << (1 << (n - 1)) * n << "\n";
+
+	// create the hypercube using a bottom up approach, this process takes two hypercube graph Qi and Pi with i being the grade
+	// of the graphs and join them to create a new hypercube graph of grade i + 1 using the following logic:
+	// Take Pi and insert it in the new graph.
+	// Take the second graph and sum the len of the graph to the nodes and insert it in the new graph.
+	// Create and edge from every node u of Qi to every node v of Pi, where u = v - len(Pi)
+	vector<vector<int>> prev_graph = {{}};
+	vector<vector<int>> graph;
+
+	for(int i = 1; i <= n; i++){
+		int prev_size = prev_graph.size();
+		int size_g = prev_size * 2;
+		graph = vector<vector<int>>(size_g, vector<int>());
+		for(int j = 0; j < prev_size; j++){
+			for(int node: prev_graph[j]){
+				graph[j].push_back(node);
+				graph[j + prev_size].push_back(node + prev_size);
 			}
+			graph[j].push_back(j + prev_size);
+			graph[j + prev_size].push_back(j);
+		}
+		prev_graph = graph;
+	}
+	for(int i = 0; i < (int)graph.size(); i++){
+		for(int node: graph[i]){
+			if(i < node)
+				myfile << i << " " << node << "\n";
 		}
 	}
-	
-	
-	return 0;
+	myfile.close();
 }
+
+
