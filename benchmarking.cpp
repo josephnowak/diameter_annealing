@@ -269,7 +269,6 @@ void run_hypercube_graph(ofstream &myfile){
 				beta, 
 				n_iterations
 			);
-			cout << "result: " << diameter.first << endl;
 			auto end = chrono::steady_clock::now();
 
 			chrono::duration<double> elapsed_time = end - start;
