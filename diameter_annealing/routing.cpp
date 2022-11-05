@@ -227,7 +227,7 @@ SymmetricRouting::SymmetricRouting(const SymmetricRouting &a)
 }
 void SymmetricRouting::store_routing()
 {
-    // Store this information on memory to reduce the amount of memory consumption.
+    // Store this information on disk to reduce the amount of memory consumption.
     this->best_R = this->R;
 }
 

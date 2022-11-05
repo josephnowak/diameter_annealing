@@ -6,6 +6,7 @@
 #include <map>
 #include <math.h>
 #include <assert.h>
+#include <iostream>
 
 
 using namespace std;
@@ -35,12 +36,14 @@ void generate_de_bruijn(
 
 
 void write_de_bruijn_graph(int n, int m, string file_path){
+	// M is the the number of symbols (the alphabet) and N is the number of symbol in every word or node.
+	// This graph has M ^ N nodes 
 	
 	ofstream myfile;
   	myfile.open(file_path);
 
 	um<string, vector<string>> g;
-	// m es el número de simbolos y n es la cantidad de ellos en un string
+	// m es el número de simbolos y n es la cantidad de ellos en cada nodo
 
 	string set_char;
 	for(int i = 0; i < m; i++)

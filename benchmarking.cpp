@@ -96,9 +96,7 @@ void run_wheel_graph(ofstream &myfile){
 		{7000, 10000, 11000, 3, 0.99, 10.0, 0, 0.5, 3},
 
 		// Biggest case tested
-
-
-
+		{13500, 5, 5, 1, 0.99, 10.0, 0, 10, 1},
 	};
 	
 	for(vector<double> &inputs: simulated_inputs){
@@ -111,6 +109,8 @@ void run_wheel_graph(ofstream &myfile){
 		double min_temperature = inputs[6];
 		double beta = inputs[7];
 		int test_repeats = inputs[8];
+
+		cout << "Processing wheel: " << graph_size << endl;
 
 		write_wheel_graph(graph_size, "graph_files/wheel.txt");
 		vector<vector<int>> g = read_graph("graph_files/wheel.txt");
@@ -155,7 +155,7 @@ void run_cycle_graph(ofstream &myfile){
 	// Graph Size, Sample Size, Universe Size, N iterations, path prob, tempe, min tempe, beta, test_repeats
 	vector<vector<double>> simulated_inputs = {
 		// small cases, trying to find the minimum with stable results and small time
-		{10, 1, 3, 5, 0.5, 10.0, 0, 0.25, 50},
+		{10, 1, 5, 5, 0.5, 10.0, 0, 0.25, 50},
 		{30, 2, 10, 10, 0.5, 10.0, 0, 0.25, 50},
 		{50, 2, 15, 10, 0.5, 10.0, 0, 0.25, 50},
 		{70, 3, 30, 20, 0.5, 10.0, 0, 0.25, 50},
@@ -178,6 +178,8 @@ void run_cycle_graph(ofstream &myfile){
 		double min_temperature = inputs[6];
 		double beta = inputs[7];
 		int test_repeats = inputs[8];
+
+		cout << "Processing cycle: " << graph_size << endl;
 
 		write_cycle_graph(graph_size, "graph_files/cycle.txt");
 		vector<vector<int>> g = read_graph("graph_files/cycle.txt");
@@ -221,20 +223,20 @@ void run_hypercube_graph(ofstream &myfile){
 	// Graph Size, Sample Size, Universe Size, N iterations, path prob, tempe, min tempe, beta, test_repeats
 	vector<vector<double>> simulated_inputs = {
 		// small cases, trying to find the minimum with stable results and small time
-		{4, 1, 5, 15, 0.6, 10.0, 0, 0.25, 50},
-		{5, 2, 10, 25, 0.6, 10.0, 0, 0.25, 50},
-		{6, 3, 20, 35, 0.6, 10.0, 0, 0.25, 50},
-		{7, 5, 20, 45, 0.6, 10.0, 0, 0.25, 50},
+		{4, 1, 5, 20, 0.6, 10.0, 0, 0.25, 50},
+		{5, 2, 15, 30, 0.6, 10.0, 0, 0.25, 50},
+		{6, 3, 25, 40, 0.6, 10.0, 0, 0.25, 50},
+		{7, 5, 60, 50, 0.6, 10.0, 0, 0.25, 50},
 
 		// Medium size cases, trying to find a good result / time  ratio
-		{8, 8, 70, 50, 0.8, 10.0, 0, 0.20, 10},
-		{9, 15, 100, 35, 0.8, 10.0, 0, 0.20, 10},
+		{8, 8, 100, 50, 0.8, 10.0, 0, 0.20, 10},
+		{9, 15, 200, 35, 0.8, 10.0, 0, 0.20, 10},
 
 		// Big size cases, restricted by time
 		{10, 50, 130, 10, 0.99, 10.0, 0, 0.5, 5},
 		{11, 100, 500, 5, 0.99, 10.0, 0, 1, 5},
-		{12, 1000, 1500, 1, 0.99, 10.0, 0, 1, 2},
-		{13, 3000, 3500, 1, 0.99, 10.0, 0, 1, 2},
+		{12, 1000, 1500, 1, 0.99, 10.0, 0, 1, 3},
+		// {13, 1, 2, 1, 0.99, 10.0, 0, 1, 1},
 
 		// Biggest case tested
 
@@ -250,6 +252,8 @@ void run_hypercube_graph(ofstream &myfile){
 		double min_temperature = inputs[6];
 		double beta = inputs[7];
 		int test_repeats = inputs[8];
+
+		cout << "Processing hypercube: " << hypercube_size << endl;
 
 		write_hypercube_graph(hypercube_size, "graph_files/hypercube.txt");
 		vector<vector<int>> g = read_graph("graph_files/hypercube.txt");
@@ -291,6 +295,83 @@ void run_hypercube_graph(ofstream &myfile){
 
 
 
+void run_de_bruijn_graph(ofstream &myfile){
+	// Graph Size, Sample Size, Universe Size, N iterations, path prob, tempe, min tempe, beta, test_repeats
+	vector<vector<double>> simulated_inputs = {
+		// small cases, trying to find the minimum with stable results and small time
+		{4, 2, 1, 10, 20, 0.6, 10.0, 0, 0.25, 50},
+		{5, 2, 2, 50, 50, 0.6, 10.0, 0, 0.25, 50},
+		{4, 3, 3, 100, 70, 0.6, 10.0, 0, 0.25, 50},
+		
+		// Medium size cases, trying to find a good result / time  ratio
+		{5, 3, 15, 130, 40, 0.8, 10.0, 0, 0.25, 30},
+		{4, 4, 25, 300, 50, 0.8, 10.0, 0, 0.25, 30},
+		{3, 7, 30, 350, 50, 0.9, 10.0, 0, 0.25, 30},
+		{4, 5, 50, 500, 30, 0.95, 10.0, 0, 0.25, 10},
+		{3, 9, 80, 700, 30, 0.99, 10.0, 0, 0.25, 5},
+
+		// // Big size cases, restricted by time
+		{4, 8, 300, 500, 1, 0.99, 10.0, 0, 1, 3},
+		{4, 9, 500, 700, 1, 0.99, 10.0, 0, 1, 3},
+		
+		// Biggest case tested
+		{2, 100, 1, 2, 1, 0.99, 10.0, 0, 10, 1},
+	};
+	
+	for(vector<double> &inputs: simulated_inputs){
+		int n = inputs[0];
+		int m = inputs[1];
+		int sample_size = inputs[2];
+		int universe_size = inputs[3];
+		int n_iterations = inputs[4];
+		float regular_path_probability = inputs[5];
+		double temperature = inputs[6];
+		double min_temperature = inputs[7];
+		double beta = inputs[8];
+		int test_repeats = inputs[9];
+
+		cout << "Processing de bruijn: " << n << ", " << m << endl;
+
+		write_de_bruijn_graph(n, m, "graph_files/de_bruijn.txt");
+		vector<vector<int>> g = read_graph("graph_files/de_bruijn.txt");
+		int graph_size = g.size();
+
+		int edge_sizes = count_edges(g);
+
+		for(int i = 0; i < test_repeats; i++){
+			auto start = chrono::steady_clock::now();
+			pair<int, int> diameter = run(
+				g, 
+				sample_size, 
+				universe_size, 
+				regular_path_probability, 
+				temperature, 
+				min_temperature, 
+				beta, 
+				n_iterations
+			);
+			auto end = chrono::steady_clock::now();
+
+			chrono::duration<double> elapsed_time = end - start;
+			myfile << "B(" << m << "," << n << ");";
+			myfile << graph_size << ";";
+			myfile << edge_sizes << ";";
+			myfile << diameter.second << ";";
+			myfile << diameter.first << ";";
+			myfile << elapsed_time.count() << ";";	
+			myfile << sample_size << ";";
+			myfile << universe_size << ";";
+			myfile << regular_path_probability << ";";
+			myfile << temperature << ";";
+			myfile << min_temperature << ";";
+			myfile << beta << ";";
+			myfile << n_iterations << "\n";
+		}
+	}
+}
+
+
+
 int main()
 {
 	ofstream myfile;
@@ -298,8 +379,11 @@ int main()
 	myfile << "Notation;" << "V;" << "E;" << "ID;" << "FD;";
 	myfile << "Time;" << "SS;" << "US;" << "RPP;";
 	myfile << "T;" << "MinT;" << "Beta;" << "IterN" << "\n";
+
+	run_wheel_graph(myfile);
+	run_cycle_graph(myfile);
 	run_hypercube_graph(myfile);
-	// run_hypercube_graph(myfile);
+	run_de_bruijn_graph(myfile);
 	myfile.close();
 	// useful to verify the solution
 	// vector<vector<vector<int>>> result_routing = routing.get_standard_format_routing();

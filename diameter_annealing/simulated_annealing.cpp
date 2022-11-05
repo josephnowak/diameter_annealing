@@ -27,6 +27,8 @@ void SimulatedAnnealing::optimize()
 {
     double temperature = this->temperature;
     pair<int, int> act_cost = this->routing->evaluate();
+    if(this->verbose)
+        cout << "Initial routing created, starting the algorithm" << endl;
     this->initial_routing_diameter = act_cost.first;
     pair<int, int> best_cost = {INT_MAX, INT_MAX};
     while (temperature > this->min_temperature)
