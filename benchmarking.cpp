@@ -10,8 +10,26 @@
 #include <random>
 #include <assert.h>
 #include <fstream>
+#include <math.h>
 
 using namespace std;
+
+
+void convert_to_geometry_reduction(
+	vector<vector<double>> &simulated_inputs,
+	float min_temp,
+	int extra_index=0
+){
+	// Graph Size, Sample Size, Universe Size, N iterations, path prob, tempe, min tempe, beta, test_repeats
+	for(vector<double> &v: simulated_inputs){
+		double initial_temp = v[5 + extra_index];
+		double beta = v[7 + extra_index];
+		double num_iters = initial_temp / beta;
+		double new_beta = pow(min_temp / initial_temp, 1.0/num_iters);
+		v[6 + extra_index] = min_temp;
+		v[7 + extra_index] = new_beta;
+	}		
+}
 
 
 vector<vector<int>> read_graph(string file_path){
@@ -97,7 +115,9 @@ void run_wheel_graph(ofstream &myfile){
 
 		// Biggest case tested
 		{13500, 5, 5, 1, 0.99, 10.0, 0, 10, 1},
+
 	};
+	convert_to_geometry_reduction(simulated_inputs, 0.01);
 	
 	for(vector<double> &inputs: simulated_inputs){
 		int graph_size = inputs[0];
@@ -167,6 +187,8 @@ void run_cycle_graph(ofstream &myfile){
 		{700, 20, 500, 3, 0.8, 10.0, 0, 0.5, 5},
 
 	};
+	convert_to_geometry_reduction(simulated_inputs, 0.01);
+
 	
 	for(vector<double> &inputs: simulated_inputs){
 		int graph_size = inputs[0];
@@ -236,11 +258,13 @@ void run_hypercube_graph(ofstream &myfile){
 		{10, 50, 130, 10, 0.99, 10.0, 0, 0.5, 5},
 		{11, 100, 500, 5, 0.99, 10.0, 0, 1, 5},
 		{12, 1000, 1500, 1, 0.99, 10.0, 0, 1, 3},
-		// {13, 1, 2, 1, 0.99, 10.0, 0, 1, 1},
+		{13, 1, 2, 1, 0.99, 10.0, 0, 1, 1},
 
 		// Biggest case tested
 
 	};
+	convert_to_geometry_reduction(simulated_inputs, 0.01);
+
 	
 	for(vector<double> &inputs: simulated_inputs){
 		int hypercube_size = inputs[0];
@@ -310,13 +334,14 @@ void run_de_bruijn_graph(ofstream &myfile){
 		{4, 5, 50, 500, 30, 0.95, 10.0, 0, 0.25, 10},
 		{3, 9, 80, 700, 30, 0.99, 10.0, 0, 0.25, 5},
 
-		// // Big size cases, restricted by time
+		// Big size cases, restricted by time
 		{4, 8, 300, 500, 1, 0.99, 10.0, 0, 1, 3},
 		{4, 9, 500, 700, 1, 0.99, 10.0, 0, 1, 3},
 		
 		// Biggest case tested
 		{2, 100, 1, 2, 1, 0.99, 10.0, 0, 10, 1},
 	};
+	convert_to_geometry_reduction(simulated_inputs, 0.01, 1);
 	
 	for(vector<double> &inputs: simulated_inputs){
 		int n = inputs[0];
@@ -376,8 +401,8 @@ int main()
 {
 	ofstream myfile;
   	myfile.open("executions.csv");
-	myfile << "Notation;" << "V;" << "E;" << "ID;" << "FD;";
-	myfile << "Time;" << "SS;" << "US;" << "RPP;";
+	myfile << "Notation;" << "V;" << "E;" << "InitialDiameter;" << "FinalDiameter;";
+	myfile << "Time;" << "SampleSize;" << "UniverseSize;" << "RegularPathProbability;";
 	myfile << "T;" << "MinT;" << "Beta;" << "IterN" << "\n";
 
 	run_wheel_graph(myfile);

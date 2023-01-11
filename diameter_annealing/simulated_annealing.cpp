@@ -26,6 +26,7 @@ SimulatedAnnealing::SimulatedAnnealing(
 void SimulatedAnnealing::optimize()
 {
     double temperature = this->temperature;
+    int total_temperature_reduction = 0;
     pair<int, int> act_cost = this->routing->evaluate();
     if(this->verbose)
         cout << "Initial routing created, starting the algorithm" << endl;
@@ -59,11 +60,16 @@ void SimulatedAnnealing::optimize()
         if(this->verbose)
             cout << "function value: " << this->routing->evaluate().first << ", temperature: " << temperature << endl;
         temperature = this->reduce_temperature(temperature);
+        total_temperature_reduction += 1;
     }
     this->routing->set_stored_routing();
+
+    if(this->verbose)
+        cout << "total number of temperature reductions: " << total_temperature_reduction << endl;
 }
 
 double SimulatedAnnealing::reduce_temperature(double temperature)
 {
-    return temperature - this->beta;
+    // return temperature - this->beta;
+    return temperature * this->beta;
 }
